@@ -242,25 +242,6 @@
       font-size: 0.96rem;
     }
 
-    .repo-link {
-      flex: 0 0 auto;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      min-height: 42px;
-      padding: 0 14px;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      color: #42506a;
-      background: rgba(255, 255, 255, 0.65);
-      text-decoration: none;
-      font-size: 0.85rem;
-      font-weight: 750;
-    }
-
-    .repo-link:hover { border-color: #b7c8e5; background: #fff; }
-    .repo-link svg { width: 16px; height: 16px; }
-
     .day-jump {
       position: sticky;
       top: 74px;
@@ -357,6 +338,9 @@
     }
 
     .resource-row:hover { border-color: #d4e0f3; background: #f3f7ff; }
+    .resource-row.watched { border-color: #bde4d6; background: #f0faf6; }
+    .resource-row.watched:hover { border-color: #91d2ba; background: #eaf8f2; }
+    .resource-row.watched .resource-title { color: #50655e; }
 
     .resource-icon {
       width: 40px;
@@ -401,6 +385,31 @@
       font-weight: 800;
     }
 
+    .resource-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .watch-toggle {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 1px solid #cbd7e8;
+      border-radius: 11px;
+      color: #69768c;
+      background: #fff;
+      transition: transform 140ms ease, color 140ms ease, background 140ms ease, border-color 140ms ease;
+    }
+
+    .watch-toggle:hover { transform: translateY(-1px); color: var(--green); border-color: #8fcbb5; }
+    .watch-toggle[aria-pressed="true"] { color: #fff; border-color: var(--green); background: var(--green); }
+    .watch-toggle svg { width: 18px; height: 18px; }
+
     .resource-action {
       min-height: 38px;
       display: inline-flex;
@@ -423,6 +432,18 @@
     .resource-action.pdf:hover { background: #ffd3d0; }
     .resource-action svg { width: 15px; height: 15px; }
     .notice-text { color: var(--amber); font-size: 0.79rem; font-weight: 750; }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
 
     .empty-state {
       padding: 60px 24px;
@@ -519,14 +540,13 @@
       .app-shell { width: min(100% - 24px, 1440px); }
       .content { padding-bottom: 46px; }
       .week-heading { display: block; }
-      .repo-link { margin-top: 20px; }
       .day-card-header { padding: 18px; }
       .day-body { padding: 4px 14px 8px; }
       .subject-section { padding-block: 18px; }
       .resource-row { grid-template-columns: 38px minmax(0, 1fr); padding: 10px 8px; }
       .resource-icon { width: 38px; height: 38px; }
       .resource-title { white-space: normal; }
-      .resource-action, .notice-text { grid-column: 2; justify-self: start; }
+      .resource-actions, .resource-action, .notice-text { grid-column: 2; justify-self: start; }
       .resource-action { min-height: 36px; }
       dialog { width: 100%; max-width: none; max-height: 100vh; margin: auto 0 0; border-radius: 20px 20px 0 0; }
       .player-footer { align-items: flex-start; flex-direction: column; }
@@ -582,10 +602,6 @@
             <h1 id="weekTitle">Semana 1</h1>
             <p class="week-summary" id="weekSummary"></p>
           </div>
-          <a class="repo-link" id="repoLink" target="_blank" rel="noopener noreferrer">
-            Ver arquivos originais
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
-          </a>
         </div>
         <nav class="day-jump" id="dayJump" aria-label="Dias da semana"></nav>
         <div class="days" id="days"></div>
@@ -618,7 +634,8 @@
         pdf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 14h6M9 18h4"/></svg>',
         notice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 17h.01"/></svg>',
         play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg>',
-        download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>'
+        download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>',
+        check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>'
       };
 
       const course = window.COURSE_DATA;
@@ -646,12 +663,18 @@
       const weeks = Array.from({ length: course.weeks || 23 }, (_, index) => index + 1);
       const itemsByWeek = new Map(weeks.map(week => [week, course.items.filter(item => item.week === week)]));
       const storedWeek = Number(localStorage.getItem('plano-estudos-semana'));
+      const watchedStorageKey = 'plano-estudos-assistidos-v1';
+      let watchedItems;
+      try {
+        watchedItems = new Set(JSON.parse(localStorage.getItem(watchedStorageKey) || '[]'));
+      } catch (_) {
+        watchedItems = new Set();
+      }
       let selectedWeek = weeks.includes(storedWeek) ? storedWeek : 1;
 
       document.getElementById('totalWeeks').textContent = course.weeks || weeks.length;
       document.getElementById('totalVideos').textContent = course.summary.videos;
       document.getElementById('totalPdfs').textContent = course.summary.pdfs;
-      document.getElementById('repoLink').href = course.repoUrl;
 
       const escapeHtml = value => String(value ?? '')
         .replaceAll('&', '&amp;')
@@ -680,6 +703,7 @@
 
       const plural = (count, singular, pluralWord) => `${count} ${count === 1 ? singular : pluralWord}`;
       const makeId = (week, index) => `semana-${week}-dia-${index + 1}`;
+      const watchedKey = item => `${item.week}|${item.day}|${item.path}`;
 
       function renderWeekNavigation() {
         weekList.innerHTML = weeks.map(week => {
@@ -709,15 +733,20 @@
         const typeLabel = item.type === 'video' ? (item.external ? 'Vídeo externo' : 'Videoaula') : item.type === 'pdf' ? 'Material em PDF' : 'Aviso';
         const shortcut = item.shortcut ? '<span class="shortcut-badge">Arquivo reaproveitado</span>' : '';
         const size = item.type !== 'notice' && item.size ? `<span>${formatSize(item.size)}</span>` : '';
+        const watched = item.type === 'video' && watchedItems.has(watchedKey(item));
         let action = `<span class="notice-text">${escapeHtml(item.note || 'Sem vídeo para este conteúdo')}</span>`;
 
         if (item.type === 'video') {
-          action = `<button class="resource-action" type="button" data-play="${item.id}">${icons.play} Assistir</button>`;
+          const watchedLabel = watched ? 'Marcar como não assistido' : 'Marcar como assistido';
+          action = `<div class="resource-actions">
+            <button class="watch-toggle" type="button" data-mark="${item.id}" aria-pressed="${watched}" aria-label="${watchedLabel}" title="${watchedLabel}">${icons.check}<span class="sr-only">${watchedLabel}</span></button>
+            <button class="resource-action" type="button" data-play="${item.id}">${icons.play} Assistir</button>
+          </div>`;
         } else if (item.type === 'pdf') {
           action = `<a class="resource-action pdf" href="${escapeHtml(item.downloadUrl)}" target="_blank" rel="noopener noreferrer">${icons.download} Baixar PDF</a>`;
         }
 
-        return `<article class="resource-row">
+        return `<article class="resource-row${watched ? ' watched' : ''}">
           <div class="resource-icon ${item.type}">${icons[item.type]}</div>
           <div class="resource-copy">
             <span class="resource-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</span>
@@ -755,9 +784,11 @@
         const groupedDays = groupWeek(items);
         const videoCount = items.filter(item => item.type === 'video').length;
         const pdfCount = items.filter(item => item.type === 'pdf').length;
+        const watchedCount = items.filter(item => item.type === 'video' && watchedItems.has(watchedKey(item))).length;
+        const watchedSummary = videoCount ? ` · ${watchedCount}/${videoCount} assistidos` : '';
 
         weekTitle.textContent = `Semana ${selectedWeek}`;
-        weekSummary.textContent = `${plural(groupedDays.length, 'dia de estudo', 'dias de estudo')} · ${plural(videoCount, 'vídeo', 'vídeos')} · ${plural(pdfCount, 'PDF', 'PDFs')}`;
+        weekSummary.textContent = `${plural(groupedDays.length, 'dia de estudo', 'dias de estudo')} · ${plural(videoCount, 'vídeo', 'vídeos')} · ${plural(pdfCount, 'PDF', 'PDFs')}${watchedSummary}`;
         document.title = `Semana ${selectedWeek} — Plano de estudos`;
 
         dayJump.innerHTML = groupedDays.map(([dayName, dayItems], index) => `
@@ -826,9 +857,29 @@
       weekSelect.addEventListener('change', () => selectWeek(Number(weekSelect.value)));
 
       days.addEventListener('click', event => {
-        const button = event.target.closest('[data-play]');
-        if (!button) return;
-        const item = course.items[Number(button.dataset.play)];
+        const marker = event.target.closest('[data-mark]');
+        if (marker) {
+          const item = course.items[Number(marker.dataset.mark)];
+          if (!item) return;
+          const key = watchedKey(item);
+          const isNowWatched = !watchedItems.has(key);
+          if (isNowWatched) watchedItems.add(key);
+          else watchedItems.delete(key);
+          localStorage.setItem(watchedStorageKey, JSON.stringify([...watchedItems]));
+
+          const label = isNowWatched ? 'Marcar como não assistido' : 'Marcar como assistido';
+          marker.setAttribute('aria-pressed', String(isNowWatched));
+          marker.setAttribute('aria-label', label);
+          marker.setAttribute('title', label);
+          marker.querySelector('.sr-only').textContent = label;
+          marker.closest('.resource-row').classList.toggle('watched', isNowWatched);
+          renderSelectedWeek();
+          return;
+        }
+
+        const playButton = event.target.closest('[data-play]');
+        if (!playButton) return;
+        const item = course.items[Number(playButton.dataset.play)];
         if (item) openPlayer(item);
       });
 
